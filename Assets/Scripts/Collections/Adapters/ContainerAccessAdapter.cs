@@ -9,8 +9,12 @@ namespace Collections.Adapters
     public class ContainerAccessAdapter : IDataAccessProvider
     {
         private readonly Container _container;
-        
-        public bool Value => _container.Value;
+
+        public bool Value
+        {
+            get => _container.Value;
+            set => _container.Value = value;
+        }
 
         public ContainerAccessAdapter(int count)
         {

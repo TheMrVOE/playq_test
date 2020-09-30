@@ -8,20 +8,16 @@ namespace Collections
     /// </summary>
     public class EnhancedContainer : IEnhancedContainer
     {
-        private readonly int _precision;
-
         /// <summary>
         /// Stores the index of the beginning of the next sequence
         /// </summary>
         private int? _firstMatchIndex;
+
         /// <summary>
-        /// Used to define how many items match in the sub-sequence
+        /// Used to cache the first arrays value
         /// </summary>
-        private int _matchItems;
-        /// <summary>
-        /// Defines how many same combinations were found in the sequence
-        /// </summary>
-        private int _totalMachCount;
+        private  bool _firstItemValue;
+
         /// <summary>
         /// The cursor position in the sequence
         /// </summary>
@@ -32,49 +28,36 @@ namespace Collections
         /// </summary>
         private IDataAccessProvider _dataProvider;
 
-        public int Count => _firstMatchIndex ?? (_firstMatchIndex = ProcessNextElement()).Value;
-        public bool Value => _dataProvider.Value;
-        
-        /// <param name="precision">As there is no way to calculate the size of each case container,
-        /// it's needed to add a precision parameter. The bigger number the better precision.
-        /// It tells to the counter what is the maximum of same item combinations can be put in the container</param>
-        /// <param name="itemsCount">Items count to generate randomly</param>
-        public EnhancedContainer(int precision, int itemsCount = 0)
+        public int Count => _firstMatchIndex ?? (_firstMatchIndex = CalculateLength()).Value;
+
+        public bool Value
         {
-            _precision = precision;
-            _dataProvider = new ContainerAccessAdapter(itemsCount);
+            get => _dataProvider.Value;
+            set => _dataProvider.Value = value;
         }
 
-        /// <param name="precision">As there is no way to calculate the size of each case container,
-        /// it's needed to add a precision parameter. The bigger number the better precision.
-        /// It tells to the counter what is the maximum of same item combinations can be put in the container</param>
-        /// <param name="accessProvider">Custom container data provider</param>
-        public EnhancedContainer(int precision, IDataAccessProvider accessProvider)
-        {
-            _precision = precision;
-            _dataProvider = accessProvider;
-        }
-        
-        /// <summary>
-        /// Moves container's cursor forward
-        /// </summary>
         public void MoveForward()
             => _dataProvider.MoveForward();
 
-        /// <summary>
-        /// Moves container's cursor backward
-        /// </summary>
         public void MoveBackward()
             => _dataProvider.MoveBackward();
 
-        /// <summary>
-        /// Resets the counter to the initial state
-        /// </summary>
-        private void ResetMatchCounter()
+        /// <param name="itemsCount">Items count to generate randomly</param>
+        public EnhancedContainer(int itemsCount = 0)
         {
-            _firstMatchIndex = null;
-            _totalMachCount = 0;
-            _matchItems = 0;
+            _dataProvider = new ContainerAccessAdapter(itemsCount);
+        }
+
+        /// <param name="accessProvider">Custom container data provider</param>
+        public EnhancedContainer(IDataAccessProvider accessProvider)
+        {
+            _dataProvider = accessProvider;
+        }
+
+        public int CalculateLength()
+        {
+            _firstItemValue = _dataProvider.Value;
+            return ProcessNextElement();
         }
 
         /// <summary>
@@ -85,34 +68,16 @@ namespace Collections
         {
             MoveCursorForward();
 
-            //We need to determine how many steps we need to get back to
-            //the item that will be compared with the current one
-            var stepsToTheBackItem = _firstMatchIndex ?? _cursorPosition;
-            var readItemValue = GetPreviousItem(stepsToTheBackItem);
-
-            var isMatch = _dataProvider.Value == readItemValue;
-            if (isMatch)
+            Value = !Value;
+            var previousValue = GetPreviousItem(_cursorPosition);
+            if (previousValue != _firstItemValue)
             {
-                //Checks if it's the first item match 
-                if (!_firstMatchIndex.HasValue)
-                    _firstMatchIndex = _cursorPosition;
-
-                _matchItems++;
-                if (_firstMatchIndex.Value == _matchItems)
-                {
-                    _totalMachCount++;
-                    _matchItems = 0;
-
-                    if (_totalMachCount == _precision)
-                        return _firstMatchIndex.Value;
-                }
-
-                return ProcessNextElement();
+                Value = !Value;
+                return _cursorPosition;
             }
 
-            ResetCursorAndCounterIfNeed();
+            Value = !Value;
 
-            ResetMatchCounter();
             return ProcessNextElement();
         }
 
@@ -122,19 +87,6 @@ namespace Collections
             _dataProvider.MoveForward();
         }
 
-        /// <summary>
-        /// Moves cursor backward to the item which was 'suspected' as the beginning of the cycle 
-        /// </summary>
-        private void ResetCursorAndCounterIfNeed()
-        {
-            var needToMoveBack = _firstMatchIndex.HasValue;
-            if (!needToMoveBack)
-                return;
-
-            var stepsBackward = _cursorPosition - _firstMatchIndex.Value;
-            MoveBackward(stepsBackward);
-            _cursorPosition -= stepsBackward;
-        }
 
         /// <summary>
         /// Returns an item by moving the cursor backward to the target item

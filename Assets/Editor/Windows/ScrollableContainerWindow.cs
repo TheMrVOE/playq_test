@@ -25,6 +25,7 @@ namespace Editor.Windows
         private GUIStyle _createNewButtonStyle;
 
         private bool _isInitialized;
+        private bool _isRepaintInvoked;
 
         private int ItemSize => HORIZONTAL_SPACING * 2 + CONTAINER_ITEM_HEIGHT;
 
@@ -55,20 +56,26 @@ namespace Editor.Windows
 
         private void OnGUI()
         {
+            if (_isRepaintInvoked)
+            {
+                _isRepaintInvoked = false;
+                return;
+            }
+
             if (!_isInitialized)
                 Initialize();
 
             DrawContainerContent();
             DrawCreateNewButton();
         }
-
+        
         private void DrawContainerContent()
         {
             MoveCursorOnScrollIfNeed();
 
-            var itemsToGet = Screen.height / ItemSize;
+            var itemsToRender = Screen.height / ItemSize;
             _scrollPosition = GUILayout.BeginScrollView(_scrollPosition);
-            for (int i = 0; i < itemsToGet; i++)
+            for (int i = 0; i < itemsToRender; i++)
             {
                 var value = _container.Value;
                 var prevColor = GUI.backgroundColor;
@@ -79,7 +86,7 @@ namespace Editor.Windows
                 GUI.backgroundColor = prevColor;
             }
 
-            for (int i = 0; i < itemsToGet; i++)
+            for (int i = 0; i < itemsToRender; i++)
                 _container.MoveBackward();
 
             GUILayout.EndScrollView();
@@ -91,13 +98,19 @@ namespace Editor.Windows
             if (scrollStep > 0)
             {
                 _container.MoveForward();
-                Repaint();
+                RepaintInternal();
             }
             else if (scrollStep < 0)
             {
                 _container.MoveBackward();
-                Repaint();
+                RepaintInternal();
             }
+        }
+
+        private void RepaintInternal()
+        {
+            _isRepaintInvoked = true;
+            Repaint();
         }
 
         private int GetScrollStep()
