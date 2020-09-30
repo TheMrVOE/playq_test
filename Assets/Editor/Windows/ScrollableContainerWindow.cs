@@ -12,16 +12,22 @@ namespace Editor.Windows
         private const int CREATE_NEW_BUTTON_HEIGHT = 40;
         private const int CONTAINER_PRICISION = 20;
 
+        private const int HORIZONTAL_SPACING = 10;
+
+        private const int MIN_SCROLL_VALUE = 3;
+
         private EnhancedContainer _container;
-        
+
         private Vector2 _scrollPosition;
         private Color _backGreenColor = new Color(186 / 255f, 217 / 255f, 190 / 255f);
         private Color _backRedColor = new Color(222 / 255f, 189 / 255f, 191 / 255f);
         private GUIStyle _containerItemStyle;
         private GUIStyle _createNewButtonStyle;
-        
+
         private bool _isInitialized;
-        
+
+        private int ItemSize => HORIZONTAL_SPACING * 2 + CONTAINER_ITEM_HEIGHT;
+
         private void Awake()
         {
             CreateContainer();
@@ -35,42 +41,72 @@ namespace Editor.Windows
         private void InitStyles()
         {
             var containerItemStyle = new GUIStyle(GUI.skin.button);
-            containerItemStyle.margin = new RectOffset(5,5,10,10);
+            containerItemStyle.margin = new RectOffset(5, 5, HORIZONTAL_SPACING, HORIZONTAL_SPACING);
             containerItemStyle.fixedHeight = CONTAINER_ITEM_HEIGHT;
             containerItemStyle.fontStyle = FontStyle.Bold;
-            
+
             _containerItemStyle = containerItemStyle;
-            
+
             var createNewButtonStyle = new GUIStyle(GUI.skin.button);
             createNewButtonStyle.fixedHeight = CREATE_NEW_BUTTON_HEIGHT;
-            
+
             _createNewButtonStyle = createNewButtonStyle;
         }
 
         private void OnGUI()
         {
-            if(!_isInitialized)
+            if (!_isInitialized)
                 Initialize();
-            
+
             DrawContainerContent();
-            DrawCreateNewButton();  
+            DrawCreateNewButton();
         }
 
         private void DrawContainerContent()
         {
+            MoveCursorOnScrollIfNeed();
+
+            var itemsToGet = Screen.height / ItemSize;
             _scrollPosition = GUILayout.BeginScrollView(_scrollPosition);
-            for (int i = 0; i < _container.Count; i++)
+            for (int i = 0; i < itemsToGet; i++)
             {
                 var value = _container.Value;
                 var prevColor = GUI.backgroundColor;
                 GUI.backgroundColor = value ? _backGreenColor : _backRedColor;
-                
+
                 _container.MoveForward();
                 GUILayout.Button(value.ToString(), _containerItemStyle);
                 GUI.backgroundColor = prevColor;
             }
 
+            for (int i = 0; i < itemsToGet; i++)
+                _container.MoveBackward();
+
             GUILayout.EndScrollView();
+        }
+
+        private void MoveCursorOnScrollIfNeed()
+        {
+            var scrollStep = GetScrollStep();
+            if (scrollStep > 0)
+            {
+                _container.MoveForward();
+                Repaint();
+            }
+            else if (scrollStep < 0)
+            {
+                _container.MoveBackward();
+                Repaint();
+            }
+        }
+
+        private int GetScrollStep()
+        {
+            if (Event.current.delta == Vector2.zero)
+                return 0;
+
+            var scrollStep = Event.current.delta.y / MIN_SCROLL_VALUE;
+            return Mathf.RoundToInt(scrollStep);
         }
 
         private void DrawCreateNewButton()
