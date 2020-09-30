@@ -48,7 +48,7 @@ namespace Editor.Tests.Collections
         }
 
         [Test]
-        public void SameElementsSequenceProcessingReturnedWrongCountTest()
+        public void SameElementsSequenceProcessingReturnedWrongLengthTest()
         {
             var sameElementsSample = new[] {true, true, true};
             
@@ -57,8 +57,9 @@ namespace Editor.Tests.Collections
             
             Assert.AreEqual(1, sameElementsCollection.Count, "single elements collection check");
         }
+        
         [Test]
-        public void RepeatableElementsProcessingReturnedWrongCountTest()
+        public void RepeatableElementsProcessingReturnedWrongLengthTest()
         {
             var repeatableElementsSample = new[] {true, false, true, false};
    
